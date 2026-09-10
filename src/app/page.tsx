@@ -79,7 +79,7 @@ export default function Home() {
   const stats = [[<ApartmentOutlined />, "โครงการทั้งหมด", String(data.stats.projects), orange], [<BarChartOutlined />, "รายรับรวม", money(data.stats.income), "#1565c0"], [<DollarOutlined />, "คงเหลือ", money(data.stats.balance), "#2e7d32"], [<FileTextOutlined />, "รออนุมัติ (บิล)", String(data.stats.pendingExpenses), "#c62828"], [<DollarOutlined />, "ค่าแรงค้างจ่าย", "฿125,600.00", "#e65100"], [<BoxPlotOutlined />, "คำขอวัสดุรอ", String(data.stats.pendingMaterials), "#1565c0"], [<ClockCircleOutlined />, "เช็คอินวันนี้", String(data.stats.checkins), "#2e7d32"], [<CheckCircleOutlined />, "กำลังดำเนินการ", "7", "#6a1b9a"]] as const;
 
   useEffect(() => {
-    if (process.env.NEXT_PUBLIC_PHP_API_ENABLED !== "true") return;
+    if (process.env.PHP_API_ENABLED !== "true") return;
     fetch("/api/auth/me").then((response) => {
       if (response.status === 401) router.replace("/login");
       return response.ok;

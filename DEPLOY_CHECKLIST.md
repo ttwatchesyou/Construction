@@ -13,7 +13,7 @@
 ## Next.js / Vercel
 
 - [ ] Set `PHP_API_URL=https://your-php-domain.example/api`.
-- [ ] Set `NEXT_PUBLIC_PHP_API_ENABLED=true`.
+- [ ] Set `PHP_API_ENABLED=true`.
 - [ ] Use the `frontend` directory as the Vercel Root Directory.
 - [ ] Use Yarn commands: `yarn install`, `yarn build`, and `yarn start`.
 - [ ] Confirm `/api/auth/login`, `/api/auth/me`, `/api/auth/logout`, and `/api/dashboard` return JSON.
