@@ -81,28 +81,40 @@ export default function Home() {
   const logout = async () => { await apiFetch("/auth/logout", { method: "POST" }); router.replace("/login"); };
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [data, setData] = useState(fallbackData);
+  const [authReady, setAuthReady] = useState(!apiEnabled);
   const stats: StatItem[] = [[ApartmentOutlined, "โครงการทั้งหมด", String(data.stats.projects), orange], [BarChartOutlined, "รายรับรวม", money(data.stats.income), "#1565c0"], [DollarOutlined, "คงเหลือ", money(data.stats.balance), "#2e7d32"], [FileTextOutlined, "รออนุมัติ (บิล)", String(data.stats.pendingExpenses), "#c62828"], [DollarOutlined, "ค่าแรงค้างจ่าย", "฿125,600.00", "#e65100"], [BoxPlotOutlined, "คำขอวัสดุรอ", String(data.stats.pendingMaterials), "#1565c0"], [ClockCircleOutlined, "เช็คอินวันนี้", String(data.stats.checkins), "#2e7d32"], [CheckCircleOutlined, "กำลังดำเนินการ", "7", "#6a1b9a"]];
 
   useEffect(() => {
     if (!apiEnabled) return;
-    apiFetch("/auth/me").then((response) => {
-      if (response.status === 401) router.replace("/login");
-      return response.ok;
-    }).catch(() => undefined);
-    apiFetch("/dashboard").then((response) => response.ok ? response.json() : null).then((apiData) => {
-      if (apiData?.projects && apiData?.stats) {
-        const projects = apiData.projects.map((project: Record<string, string | number>) => ({
-          ...project,
-          color: project.status === "completed" ? "green" : "orange",
-          assigned: Number(project.assigned ?? 0),
-          income: money(Number(project.income ?? 0)),
-          budget: money(Number(project.budget ?? 0)),
-          expense: money(Number(project.expense ?? 0)),
-          expensePct: Number(project.budget) > 0 ? Math.round((Number(project.expense) / Number(project.budget)) * 100) : 0,
-        })) as Project[];
-        setData({ ...fallbackData, stats: apiData.stats, projects });
+    const loadDashboard = async () => {
+      try {
+        const response = await apiFetch("/auth/me");
+        if (response.status === 401) {
+          router.replace("/login");
+          return;
+        }
+        if (!response.ok) throw new Error("Auth check failed");
+        setAuthReady(response.ok);
+
+        const dashboardResponse = await apiFetch("/dashboard");
+        const apiData = dashboardResponse.ok ? await dashboardResponse.json() : null;
+        if (apiData?.projects && apiData?.stats) {
+          const projects = apiData.projects.map((project: Record<string, string | number>) => ({
+            ...project,
+            color: project.status === "completed" ? "green" : "orange",
+            assigned: Number(project.assigned ?? 0),
+            income: money(Number(project.income ?? 0)),
+            budget: money(Number(project.budget ?? 0)),
+            expense: money(Number(project.expense ?? 0)),
+            expensePct: Number(project.budget) > 0 ? Math.round((Number(project.expense) / Number(project.budget)) * 100) : 0,
+          })) as Project[];
+          setData({ ...fallbackData, stats: apiData.stats, projects });
+        }
+      } catch {
+        router.replace("/login");
       }
-    }).catch(() => undefined);
+    };
+    loadDashboard();
   }, [router]);
 
   useEffect(() => {
@@ -114,5 +126,7 @@ export default function Home() {
     return () => document.removeEventListener("click", handleLogoutClick);
   });
 
-  return <Shell><Overlay $show={mobileMenuOpen} aria-label="ปิดเมนู" onClick={() => setMobileMenuOpen(false)} /><Side $open={mobileMenuOpen} width={258} trigger={null}><Brand><BrandIcon><ApartmentOutlined /></BrandIcon><BrandText><strong>Construction Pro</strong><span>Management System</span></BrandText></Brand><Nav mode="inline" theme="dark" items={menuItems} selectedKeys={["dashboard"]} /><UserArea><User><Avatar style={{ background: orange }}>ส</Avatar><div><strong>สมชาย ใจดี</strong><span>Super Admin</span></div></User><Button block ghost icon={<LogoutOutlined />} style={{ color: "rgba(255,255,255,.6)", borderColor: "rgba(255,255,255,.1)" }}>ออกจากระบบ</Button></UserArea></Side><MainArea><MainHeader><div style={{ display: "flex", alignItems: "center", gap: 14 }}><Button type="text" icon={<MenuOutlined />} onClick={() => setMobileMenuOpen((open) => !open)} /><Title level={4} style={{ margin: 0 }}>แดชบอร์ด</Title></div><div style={{ display: "flex", alignItems: "center", gap: 18 }}><Text type="secondary" className="header-date">15 เมษายน 2569</Text><Badge count={3} size="small"><Button shape="circle" icon={<BellOutlined />} /></Badge></div></MainHeader><PageContent><Row gutter={[14, 14]}>{stats.map(([Icon, label, value, tone]) => <Col xs={12} sm={6} lg={3} key={label}><Stat><StatIcon $tone={tone}><Icon /></StatIcon><Statistic title={label} value={value} /></Stat></Col>)}</Row><Row gutter={[14, 14]} style={{ marginTop: 14 }}><Col xs={24} lg={9}><Panel title={<><BarChartOutlined style={{ color: orange }} /> สถานะโครงการ</>}><Donut><div><strong>12</strong><span>โครงการ</span></div></Donut><Legend><span><Dot $color="#ff6b00" />กำลังดำเนินการ <b>7</b></span><span><Dot $color="#2e7d32" />เสร็จสิ้น <b>3</b></span><span><Dot $color="#1565c0" />ส่งมอบแล้ว <b>2</b></span></Legend><QuickLinks><a href="#">▦ โครงการ</a><a href="#">▰ วัสดุ <b>5</b></a><a href="#">฿ ค้างจ่าย</a><a href="#">⌁ cashflow</a></QuickLinks></Panel></Col><Col xs={24} lg={15}><Panel title={<><ApartmentOutlined style={{ color: orange }} /> โครงการล่าสุด</>} extra={<Button type="link" size="small">ดูทั้งหมด</Button>}>{data.projects.map((project) => <ProjectCard project={project} key={project.code} />)}</Panel></Col></Row><Row gutter={[14, 14]} style={{ marginTop: 14 }}><Col xs={24} lg={12}><Panel title={<><FileTextOutlined style={{ color: "#c62828" }} /> ค่าใช้จ่ายรออนุมัติ</>} extra={<Button type="link" size="small" danger>ดูทั้งหมด</Button>}><ActivityList items={data.expenses} /></Panel></Col><Col xs={24} lg={12}><Panel title={<><ClockCircleOutlined style={{ color: "#1565c0" }} /> การเข้างานวันนี้</>} extra={<Button type="link" size="small">ดูทั้งหมด</Button>}><ActivityList items={data.attendance} attendanceMode /></Panel></Col></Row></PageContent></MainArea></Shell>;
+  if (!authReady) return <Shell />;
+
+  return <Shell><Overlay $show={mobileMenuOpen} aria-label="ปิดเมนู" onClick={() => setMobileMenuOpen(false)} /><Side $open={mobileMenuOpen} width={258} trigger={null}><Brand><BrandIcon><ApartmentOutlined /></BrandIcon><BrandText><strong>Construction Pro</strong><span>Management System</span></BrandText></Brand><Nav mode="inline" theme="dark" items={menuItems} selectedKeys={["dashboard"]} /><UserArea><User><Avatar style={{ background: orange }}>ส</Avatar><div><strong>สมชาย ใจดี</strong><span>Super Admin</span></div></User><Button block ghost icon={<LogoutOutlined />} style={{ color: "rgba(255,255,255,.6)", borderColor: "rgba(255,255,255,.1)" }}>ออกจากระบบ</Button></UserArea></Side><MainArea><MainHeader><div style={{ display: "flex", alignItems: "center", gap: 14 }}><Button type="text" icon={<MenuOutlined />} onClick={() => setMobileMenuOpen((open) => !open)} /><Title level={4} style={{ margin: 0 }}>แดชบอร์ด</Title></div><div style={{ display: "flex", alignItems: "center", gap: 18 }}><Text type="secondary" className="header-date">15 เมษายน 2569</Text><Badge count={3} size="small"><Button shape="circle" icon={<BellOutlined />} /></Badge></div></MainHeader><PageContent><Row gutter={[14, 14]}>{stats.map(([Icon, label, value, tone]) => <Col xs={12} sm={6} lg={3} key={label}><Stat><StatIcon $tone={tone}><Icon /></StatIcon><Statistic title={label} value={value} /></Stat></Col>)}</Row><Row gutter={[14, 14]} style={{ marginTop: 14 }}><Col xs={24} lg={9}><Panel title={<><BarChartOutlined style={{ color: orange }} /> สถานะโครงการ</>}><Donut><div><strong>{data.stats.projects}</strong><span>โครงการ</span></div></Donut><Legend><span><Dot $color="#ff6b00" />กำลังดำเนินการ <b>7</b></span><span><Dot $color="#2e7d32" />เสร็จสิ้น <b>3</b></span><span><Dot $color="#1565c0" />ส่งมอบแล้ว <b>2</b></span></Legend><QuickLinks><a href="#">▦ โครงการ</a><a href="#">▰ วัสดุ <b>5</b></a><a href="#">฿ ค้างจ่าย</a><a href="#">⌁ cashflow</a></QuickLinks></Panel></Col><Col xs={24} lg={15}><Panel title={<><ApartmentOutlined style={{ color: orange }} /> โครงการล่าสุด</>} extra={<Button type="link" size="small">ดูทั้งหมด</Button>}>{data.projects.map((project) => <ProjectCard project={project} key={project.code} />)}</Panel></Col></Row><Row gutter={[14, 14]} style={{ marginTop: 14 }}><Col xs={24} lg={12}><Panel title={<><FileTextOutlined style={{ color: "#c62828" }} /> ค่าใช้จ่ายรออนุมัติ</>} extra={<Button type="link" size="small" danger>ดูทั้งหมด</Button>}><ActivityList items={data.expenses} /></Panel></Col><Col xs={24} lg={12}><Panel title={<><ClockCircleOutlined style={{ color: "#1565c0" }} /> การเข้างานวันนี้</>} extra={<Button type="link" size="small">ดูทั้งหมด</Button>}><ActivityList items={data.attendance} attendanceMode /></Panel></Col></Row></PageContent></MainArea></Shell>;
 }
