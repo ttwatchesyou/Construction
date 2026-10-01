@@ -5,6 +5,7 @@ import { LockOutlined, UserOutlined, LoginOutlined, ApartmentOutlined } from "@a
 import styled from "styled-components";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { apiFetch } from "@/lib/api";
 
 const Page = styled.main`min-height:100vh;display:grid;place-items:center;padding:20px;background:linear-gradient(135deg,#1a1f36,#2d3561);`;
 const Box = styled(Card)`width:min(100%,420px);border:0;border-radius:22px;box-shadow:0 25px 60px rgba(0,0,0,.3);.ant-card-body{padding:36px;}`;
@@ -17,7 +18,7 @@ export default function LoginPage() {
   const onFinish = async (values: { username: string; password: string }) => {
     setError(""); setLoading(true);
     try {
-      const response = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(values) });
+      const response = await apiFetch("/auth/login", { method: "POST", body: JSON.stringify(values) });
       if (!response.ok) { const body = await response.json().catch(() => ({})); throw new Error(body.error || "เข้าสู่ระบบไม่สำเร็จ"); }
       router.replace("/");
     } catch (reason) { setError(reason instanceof Error ? reason.message : "เชื่อมต่อระบบไม่ได้"); }

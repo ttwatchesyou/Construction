@@ -1,0 +1,16 @@
+[Unit]
+Description=Construction Pro Node Backend
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/construction/server
+EnvironmentFile=/opt/construction/server/.env
+ExecStart=/usr/bin/node /opt/construction/server/src/index.js
+Restart=always
+RestartSec=5
+User=www-data
+Group=www-data
+
+[Install]
+WantedBy=multi-user.target
